@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  super_admin
+  seller_admin
+  collaborator
+  viewer
+}
+
+enum SubscriptionTier {
+  free
+  pro
+}
+
+enum TicketCapacityType {
+  unlimited
+  dedicated
+  shared
+}
+
+enum PaymentMethod {
+  stripe
+  transfer
+}
+
+enum PurchaseStatus {
+  pending
+  awaiting_transfer_confirmation
+  completed
+  cancelled
+  refunded
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  password       String
+  fullName       String
+  phone          String?
+  role           UserRole @default(viewer)
+  organizationId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  events       Event[]
+  purchases    Purchase[]
+
+  @@index([email])
+  @@index([organizationId])
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  logoUrl     String?
+  coverUrl    String?
+  website     String?
+  contactEmail String?
+  contactPhone String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users  User[]
+  events Event[]
+
+  @@index([name])
+  @@index([slug])
+}
+
+model Event {
+  id                   String   @id @default(cuid())
+  name                 String
+  description          String?
+  date                 DateTime
+  time                 String
+  venueName            String
+  location             String
+  imageUrl             String?
+  organizerLogoUrl     String?
+  venuePlanUrl         String?
+  employeeNumberLabel  String?
+  successSoundId       String   @default("success-1")
+  errorSoundId         String   @default("error-1")
+  vibrationEnabled     Boolean  @default(true)
+  vibrationIntensity   String   @default("heavy")
+  primaryColor         String?
+  secondaryColor       String?
+  accentColor          String?
+  createdBy            String
+  organizationId       String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  creator      User          @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  attendees    Attendee[]
+  prizes       Prize[]
+  winners      RaffleWinner[]
+  tickets      Ticket[]
+  pools        CapacityPool[]
+  purchases    Purchase[]
+  messages     Message[]
+
+  @@index([createdBy])
+  @@index([organizationId])
+  @@index([date])
+}
+
+model Attendee {
+  id             String   @id @default(cuid())
+  eventId        String
+  fullName       String
+  email          String
+  employeeNumber String
+  ticketCode     String   @unique
+  checkedIn      Boolean  @default(false)
+  checkedInAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([ticketCode])
+  @@index([email])
+}
+
+model Prize {
+  id          String   @id @default(cuid())
+  eventId     String
+  name        String
+  description String?
+  imageUrl    String?
+  quantity    Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  event   Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  winners RaffleWinner[]
+
+  @@index([eventId])
+}
+
+model RaffleWinner {
+  id         String   @id @default(cuid())
+  eventId    String
+  prizeId    String
+  attendeeId String
+  wonAt      DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  prize Prize @relation(fields: [prizeId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([prizeId])
+}
+
+model Ticket {
+  id                    String             @id @default(cuid())
+  eventId               String
+  name                  String
+  description           String?
+  imageUrl              String?
+  price                 Float
+  currency              String             @default("MXN")
+  capacityType          TicketCapacityType
+  dedicatedCapacity     Int?
+  sharedCapacityPoolId  String?
+  soldCount             Int                @default(0)
+  saleStartDate         DateTime
+  saleEndDate           DateTime
+  isActive              Boolean            @default(true)
+  formFields            Json?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  pool     CapacityPool? @relation(fields: [sharedCapacityPoolId], references: [id], onDelete: SetNull)
+  purchases Purchase[]
+
+  @@index([eventId])
+  @@index([sharedCapacityPoolId])
+}
+
+model CapacityPool {
+  id            String   @id @default(cuid())
+  eventId       String
+  name          String
+  totalCapacity Int
+  usedCapacity  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  event   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tickets Ticket[]
+
+  @@index([eventId])
+}
+
+model Purchase {
+  id              String         @id @default(cuid())
+  eventId         String
+  ticketId        String
+  ticketName      String
+  userId          String
+  quantity        Int
+  unitPrice       Float
+  totalAmount     Float
+  currency        String
+  buyerEmail      String
+  buyerFullName   String
+  buyerPhone      String?
+  formData        Json?
+  paymentMethod   PaymentMethod
+  paymentIntentId String?
+  status          PurchaseStatus @default(pending)
+  purchasedAt     DateTime       @default(now())
+  confirmedAt     DateTime?
+
+  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([ticketId])
+  @@index([userId])
+  @@index([buyerEmail])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  eventId   String
+  subject   String
+  content   String
+  sentBy    String
+  sentAt    DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+}

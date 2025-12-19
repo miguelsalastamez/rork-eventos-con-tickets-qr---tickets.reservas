@@ -117,20 +117,7 @@ export const [UserProvider, useUser] = createContextHook(() => {
           setUser(JSON.parse(storedUser));
           setAuthToken(storedToken);
         } else {
-          console.log('📝 No user found, creating guest user via API...');
-          const result = await guestLoginMutation.mutateAsync();
-          
-          if (cancelled) return;
-          
-          setUser(result.user as User);
-          setAuthToken(result.token);
-          
-          await Promise.all([
-            AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(result.user)),
-            AsyncStorage.setItem(AUTH_TOKEN_STORAGE_KEY, result.token),
-          ]);
-          
-          console.log('✅ Guest user created:', result.user.id);
+          console.log('📝 No user found in storage');
         }
 
         if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
@@ -150,7 +137,7 @@ export const [UserProvider, useUser] = createContextHook(() => {
     return () => {
       cancelled = true;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const saveUser = useCallback(async (userData: User, token?: string) => {
     setUser(userData);

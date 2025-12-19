@@ -8,6 +8,11 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "extra": {
+      "EXPO_PUBLIC_SUPABASE_URL": "https://qaiaigeskomvqvcvgobo.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_ZPA_pYdnkoZ9l6RecVFZ0Q_KnLj61Ms",
+      "EXPO_PUBLIC_RORK_API_BASE_URL": "https://tickets.reservas.events"
+    },
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",

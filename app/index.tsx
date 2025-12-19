@@ -14,6 +14,7 @@ export default function HomeScreen() {
   const { events, getEventAttendees, isLoading, loadSampleData } = useEvents();
   const { user, createDemoUser, permissions, featureLimits } = useUser();
   const [loadingData, setLoadingData] = useState(false);
+  const hasAttemptedUserCreation = React.useRef(false);
 
   const handleLoadSampleData = async () => {
     Alert.alert(
@@ -43,10 +44,11 @@ export default function HomeScreen() {
   };
 
   React.useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !user && !hasAttemptedUserCreation.current) {
+      hasAttemptedUserCreation.current = true;
       createDemoUser('seller_admin');
     }
-  }, [isLoading, user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isLoading, user, createDemoUser]);
 
   if (isLoading) {
     return (

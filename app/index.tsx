@@ -46,7 +46,7 @@ export default function HomeScreen() {
     if (!isLoading && !user) {
       createDemoUser('seller_admin');
     }
-  }, [isLoading, user, createDemoUser]);
+  }, [isLoading, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading) {
     return (

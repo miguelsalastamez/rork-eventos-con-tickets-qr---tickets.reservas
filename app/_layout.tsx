@@ -13,15 +13,6 @@ import { trpc, trpcClient } from "@/lib/trpc";
 
 SplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
 interface ErrorBoundaryProps {
   children: React.ReactNode;
 }
@@ -180,6 +171,19 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const [queryClient] = React.useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: 1,
+            refetchOnWindowFocus: false,
+            throwOnError: false,
+          },
+        },
+      })
+  );
+
   useEffect(() => {
     SplashScreen.hideAsync();
   }, []);

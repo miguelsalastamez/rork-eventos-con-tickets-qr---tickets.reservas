@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import createContextHook from '@nkzw/create-context-hook';
 import { User, UserRole, Organization, Permission, FeatureLimits, SubscriptionTier } from '@/types';
@@ -97,13 +97,10 @@ export const [UserProvider, useUser] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState(true);
 
   const guestLoginMutation = trpc.auth.guestLogin.useMutation();
-  const mutateAsyncRef = React.useRef(guestLoginMutation.mutateAsync);
-  
-  React.useEffect(() => {
-    mutateAsyncRef.current = guestLoginMutation.mutateAsync;
-  }, [guestLoginMutation.mutateAsync]);
 
   useEffect(() => {
+    let cancelled = false;
+    
     const loadUserData = async () => {
       try {
         const [storedUser, storedToken, storedOrgs, storedTier] = await Promise.all([
@@ -113,13 +110,17 @@ export const [UserProvider, useUser] = createContextHook(() => {
           AsyncStorage.getItem(SUBSCRIPTION_TIER_STORAGE_KEY),
         ]);
 
+        if (cancelled) return;
+
         if (storedUser && storedToken) {
           console.log('✅ Loaded user from storage');
           setUser(JSON.parse(storedUser));
           setAuthToken(storedToken);
         } else {
           console.log('📝 No user found, creating guest user via API...');
-          const result = await mutateAsyncRef.current();
+          const result = await guestLoginMutation.mutateAsync();
+          
+          if (cancelled) return;
           
           setUser(result.user as User);
           setAuthToken(result.token);
@@ -135,14 +136,21 @@ export const [UserProvider, useUser] = createContextHook(() => {
         if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
         if (storedTier) setSubscriptionTier(storedTier as SubscriptionTier);
       } catch (error) {
+        if (cancelled) return;
         console.error('❌ Error loading user data:', error);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadUserData();
-  }, []);
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [guestLoginMutation]);
 
   const saveUser = useCallback(async (userData: User, token?: string) => {
     setUser(userData);

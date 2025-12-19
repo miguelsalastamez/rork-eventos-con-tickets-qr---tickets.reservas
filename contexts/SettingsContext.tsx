@@ -83,42 +83,42 @@ export const [SettingsProvider, useSettings] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
+        if (stored) {
+          setSettings(JSON.parse(stored));
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
     loadSettings();
   }, []);
 
-  const loadSettings = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
-      if (stored) {
-        setSettings(JSON.parse(stored));
-      }
-    } catch (error) {
-      console.error('Error loading settings:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const saveSettings = async (newSettings: Settings) => {
+  const saveSettings = useCallback(async (newSettings: Settings) => {
     try {
       await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(newSettings));
       setSettings(newSettings);
     } catch (error) {
       console.error('Error saving settings:', error);
     }
-  };
+  }, []);
 
   const updateSuccessSound = useCallback((soundId: string) => {
     saveSettings({ ...settings, successSoundId: soundId });
-  }, [settings]);
+  }, [settings, saveSettings]);
 
   const updateErrorSound = useCallback((soundId: string) => {
     saveSettings({ ...settings, errorSoundId: soundId });
-  }, [settings]);
+  }, [settings, saveSettings]);
 
   const toggleVibration = useCallback(() => {
     saveSettings({ ...settings, vibrationEnabled: !settings.vibrationEnabled });
-  }, [settings]);
+  }, [settings, saveSettings]);
 
   const getSuccessSound = useCallback(() => {
     return SUCCESS_SOUNDS.find(s => s.id === settings.successSoundId) || SUCCESS_SOUNDS[0];

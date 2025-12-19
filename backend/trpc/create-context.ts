@@ -2,28 +2,16 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import superjson from "superjson";
 import { createClient } from "@supabase/supabase-js";
-import jwt from "jsonwebtoken";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "https://qaiaigeskomvqvcvgobo.supabase.co";
 const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_ZPA_pYdnkoZ9l6RecVFZ0Q_KnLj61Ms";
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const DEFAULT_TEST_USER_ID = "6bbd57f7-bf8f-41b1-9d85-92bbbf49d1f0";
 
 export const createContext = async (opts: FetchCreateContextFnOptions) => {
-  const authHeader = opts.req.headers.get("authorization");
-  let userId: string | null = null;
-
-  if (authHeader?.startsWith("Bearer ")) {
-    const token = authHeader.substring(7);
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-      userId = decoded.userId;
-    } catch (error) {
-      console.error("JWT verification failed:", error);
-    }
-  }
+  const userId = DEFAULT_TEST_USER_ID;
 
   return {
     req: opts.req,

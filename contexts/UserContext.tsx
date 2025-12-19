@@ -2,12 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import createContextHook from '@nkzw/create-context-hook';
 import { User, UserRole, Organization, Permission, FeatureLimits, SubscriptionTier } from '@/types';
-import { trpc } from '@/lib/trpc';
 
 const USER_STORAGE_KEY = '@eventpass_user';
 const AUTH_TOKEN_STORAGE_KEY = '@eventpass_auth_token';
 const ORGANIZATIONS_STORAGE_KEY = '@eventpass_organizations';
 const SUBSCRIPTION_TIER_STORAGE_KEY = '@eventpass_subscription_tier';
+
+const DEFAULT_TEST_USER_ID = '6bbd57f7-bf8f-41b1-9d85-92bbbf49d1f0';
+const DEFAULT_TEST_TOKEN = 'test-token-default';
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission> = {
   super_admin: {
@@ -96,8 +98,6 @@ export const [UserProvider, useUser] = createContextHook(() => {
   const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>('free');
   const [isLoading, setIsLoading] = useState(true);
 
-  const guestLoginMutation = trpc.auth.guestLogin.useMutation();
-
   useEffect(() => {
     let cancelled = false;
     
@@ -117,7 +117,19 @@ export const [UserProvider, useUser] = createContextHook(() => {
           setUser(JSON.parse(storedUser));
           setAuthToken(storedToken);
         } else {
-          console.log('📝 No user found in storage');
+          console.log('📝 Creating default test user');
+          const defaultUser: User = {
+            id: DEFAULT_TEST_USER_ID,
+            email: 'test@example.com',
+            fullName: 'Test User',
+            role: 'seller_admin',
+            createdAt: new Date().toISOString(),
+          };
+          setUser(defaultUser);
+          setAuthToken(DEFAULT_TEST_TOKEN);
+          await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(defaultUser));
+          await AsyncStorage.setItem(AUTH_TOKEN_STORAGE_KEY, DEFAULT_TEST_TOKEN);
+          console.log('✅ Default test user created:', DEFAULT_TEST_USER_ID);
         }
 
         if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
@@ -159,25 +171,21 @@ export const [UserProvider, useUser] = createContextHook(() => {
   }, []);
 
   const createDemoUser = useCallback(async (role: UserRole = 'seller_admin', organizationId?: string): Promise<User> => {
-    console.log('🔨 Creating demo user with role:', role);
+    console.log('🔨 Using default test user with role:', role);
     
-    try {
-      const result = await guestLoginMutation.mutateAsync();
-      
-      const demoUser = {
-        ...result.user,
-        role,
-        organizationId,
-      } as User;
-      
-      await saveUser(demoUser, result.token);
-      console.log('✅ Demo user created:', demoUser.id);
-      return demoUser;
-    } catch (error) {
-      console.error('❌ Error creating demo user:', error);
-      throw error;
-    }
-  }, [guestLoginMutation, saveUser]);
+    const demoUser: User = {
+      id: DEFAULT_TEST_USER_ID,
+      email: 'test@example.com',
+      fullName: 'Test User',
+      role,
+      organizationId,
+      createdAt: new Date().toISOString(),
+    };
+    
+    await saveUser(demoUser, DEFAULT_TEST_TOKEN);
+    console.log('✅ Test user set:', demoUser.id);
+    return demoUser;
+  }, [saveUser]);
 
   const setUserRole = useCallback(async (role: UserRole) => {
     if (!user) {

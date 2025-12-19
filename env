@@ -3,4 +3,8 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_ZPA_pYdnkoZ9l6RecVFZ0Q_KnLj61Ms
 EXPO_PUBLIC_TOOLKIT_URL=https://toolkit.rork.com
 EXPO_PUBLIC_PROJECT_ID=92loqsix46yuo4fa4rjne
 EXPO_PUBLIC_TEAM_ID=e5845339-c03b-4808-8c82-58f1ed636591
-NODE_ENV=development
+NODE_ENV=production
+
+DATABASE_URL=postgresql://postgres:Bi0i19c3salas@db.qaiaigeskomvqvcvgobo.supabase.co:5432/postgres?schema=public
+JWT_SECRET=bXk5c2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1yZXNlcnZhcy1ldmVudHMtMjAyNQ==
+PORT=8081

@@ -5,15 +5,15 @@ import { useRouter } from 'expo-router';
 import { Plus, Calendar, MapPin, Users, Database, Settings, TrendingUp, User as UserIcon } from 'lucide-react-native';
 import { useEvents } from '@/contexts/EventContext';
 import { useUser } from '@/contexts/UserContext';
+import { Attendee } from '@/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import MediaViewer from '@/components/MediaViewer';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { events, getEventAttendees, isLoading, loadSampleData } = useEvents();
-  const { user, createDemoUser, permissions, subscriptionTier, featureLimits } = useUser();
+  const { user, createDemoUser, permissions, featureLimits } = useUser();
   const [loadingData, setLoadingData] = useState(false);
-  const [showRoleSelector, setShowRoleSelector] = useState(false);
 
   const handleLoadSampleData = async () => {
     Alert.alert(
@@ -136,7 +136,7 @@ export default function HomeScreen() {
           <View style={styles.eventsGrid}>
             {events.map((event) => {
               const attendees = getEventAttendees(event.id);
-              const checkedInCount = attendees.filter(a => a.checkedIn).length;
+              const checkedInCount = attendees.filter((a: Attendee) => a.checkedIn).length;
 
               return (
                 <TouchableOpacity

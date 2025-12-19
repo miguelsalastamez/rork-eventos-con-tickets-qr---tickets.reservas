@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Trophy, RotateCcw, CheckCircle, Award } from 'lucide-react-native';
 import { useEvents } from '@/contexts/EventContext';
-import { RaffleWinner } from '@/types';
+import { RaffleWinner, Attendee } from '@/types';
 
 Dimensions.get('window');
 const NAME_HEIGHT = 80;
@@ -39,7 +39,7 @@ export default function RaffleSpinScreen() {
   const prizes = useMemo(() => getEventPrizes(id), [getEventPrizes, id]);
   const attendees = useMemo(() => getEventAttendees(id), [getEventAttendees, id]);
   const existingWinners = useMemo(() => getEventRaffleWinners(id), [getEventRaffleWinners, id]);
-  const checkedInAttendees = attendees.filter((a) => a.checkedIn);
+  const checkedInAttendees = attendees.filter((a: Attendee) => a.checkedIn);
 
   const primaryColor = event?.primaryColor || '#6366f1';
   const backgroundColor = event?.backgroundColor || '#f9fafb';
@@ -47,7 +47,7 @@ export default function RaffleSpinScreen() {
   const [currentPrizeIndex, setCurrentPrizeIndex] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
-  const [displayedName, setDisplayedName] = useState<string>('');
+  const [, setDisplayedName] = useState<string>('');
   const [winners, setWinners] = useState<RaffleWinner[]>([]);
   const [usedAttendeeIds, setUsedAttendeeIds] = useState<Set<string>>(new Set());
   const [intervalSeconds, setIntervalSeconds] = useState('3');
@@ -59,12 +59,12 @@ export default function RaffleSpinScreen() {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    const winnerIds = new Set(existingWinners.map((w) => w.attendeeId));
+    const winnerIds = new Set<string>(existingWinners.map((w: any) => w.attendeeId));
     setUsedAttendeeIds(winnerIds);
   }, [existingWinners]);
 
   useEffect(() => {
-    const names = checkedInAttendees.map((a) => a.fullName);
+    const names = checkedInAttendees.map((a: Attendee) => a.fullName);
     const repeatedNames: string[] = [];
     const repeatCount = Math.min(Math.ceil(1000 / names.length), 20);
     for (let i = 0; i < repeatCount; i++) {
@@ -98,7 +98,7 @@ export default function RaffleSpinScreen() {
       setDisplayedName('');
 
       const availableAttendees = checkedInAttendees.filter(
-        (a) => !usedAttendeeIds.has(a.id)
+        (a: Attendee) => !usedAttendeeIds.has(a.id)
       );
 
       if (availableAttendees.length === 0) {
@@ -221,7 +221,7 @@ export default function RaffleSpinScreen() {
     setCurrentPrizeIndex(0);
     setWinner(null);
     setWinners([]);
-    setUsedAttendeeIds(new Set(existingWinners.map((w) => w.attendeeId)));
+    setUsedAttendeeIds(new Set<string>(existingWinners.map((w: any) => w.attendeeId)));
   };
 
   const stopAutoRaffle = () => {
@@ -247,7 +247,7 @@ export default function RaffleSpinScreen() {
             setWinner(null);
             setDisplayedName('');
             setWinners([]);
-            setUsedAttendeeIds(new Set(existingWinners.map((w) => w.attendeeId)));
+            setUsedAttendeeIds(new Set<string>(existingWinners.map((w: any) => w.attendeeId)));
             scrollY.setValue(0);
             scaleAnim.setValue(1);
           },
@@ -297,17 +297,7 @@ export default function RaffleSpinScreen() {
     extrapolate: 'clamp',
   });
 
-  const indicatorScale = scaleAnim.interpolate({
-    inputRange: [0.95, 1, 1.1],
-    outputRange: [1, 1, 1.15],
-    extrapolate: 'clamp',
-  });
 
-  const indicatorOpacity = scaleAnim.interpolate({
-    inputRange: [0.95, 1, 1.1],
-    outputRange: [0.8, 1, 1],
-    extrapolate: 'clamp',
-  });
 
   return (
     <>

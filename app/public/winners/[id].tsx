@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Trophy, ArrowLeft, Share2 } from 'lucide-react-native';
 import { useEvents } from '@/contexts/EventContext';
+import { Attendee, Prize } from '@/types';
 
 export default function PublicWinnersScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,9 +36,9 @@ export default function PublicWinnersScreen() {
   const textColor = event?.textColor || '#111827';
 
   const winnersWithDetails = useMemo(() => {
-    return winners.map((winner) => {
-      const prize = prizes.find((p) => p.id === winner.prizeId);
-      const attendee = attendees.find((a) => a.id === winner.attendeeId);
+    return winners.map((winner: any) => {
+      const prize = prizes.find((p: Prize) => p.id === winner.prizeId);
+      const attendee = attendees.find((a: Attendee) => a.id === winner.attendeeId);
       return {
         ...winner,
         prize,
@@ -165,7 +166,7 @@ export default function PublicWinnersScreen() {
             </View>
 
             <View style={styles.cardsContainer}>
-              {winnersWithDetails.map((winner, index) => (
+              {winnersWithDetails.map((winner: any, index: number) => (
                 <View 
                   key={winner.id} 
                   style={styles.winnerCard}

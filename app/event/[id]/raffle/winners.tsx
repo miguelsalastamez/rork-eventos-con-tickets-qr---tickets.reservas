@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { Trophy, Download, Trash2, FileText, ExternalLink } from 'lucide-react-native';
 import { useEvents } from '@/contexts/EventContext';
+import { Attendee, Prize } from '@/types';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 
@@ -39,9 +40,9 @@ export default function RaffleWinnersScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const winnersWithDetails = useMemo(() => {
-    return winners.map((winner) => {
-      const prize = prizes.find((p) => p.id === winner.prizeId);
-      const attendee = attendees.find((a) => a.id === winner.attendeeId);
+    return winners.map((winner: any) => {
+      const prize = prizes.find((p: Prize) => p.id === winner.prizeId);
+      const attendee = attendees.find((a: Attendee) => a.id === winner.attendeeId);
       return {
         ...winner,
         prize,
@@ -53,7 +54,7 @@ export default function RaffleWinnersScreen() {
   const generateCertificate = async (winnerId: string) => {
     try {
       setIsGenerating(true);
-      const winner = winnersWithDetails.find((w) => w.id === winnerId);
+      const winner = winnersWithDetails.find((w: any) => w.id === winnerId);
       if (!winner) {
         Alert.alert('Error', 'Ganador no encontrado');
         return;
@@ -256,7 +257,7 @@ export default function RaffleWinnersScreen() {
       const isFirstPage = i === 0;
       const isLastPage = i + prizesPerPage >= winnersWithDetails.length;
       
-      const winnersHTML = pageWinners.map((winner, index) => `
+      const winnersHTML = pageWinners.map((winner: any, index: number) => `
         <div class="winner-card">
           <div class="card-header">
             <div class="prize-number">
@@ -591,7 +592,7 @@ export default function RaffleWinnersScreen() {
           </View>
 
           <View style={styles.winnersList}>
-            {winnersWithDetails.map((winner, index) => (
+            {winnersWithDetails.map((winner: any, index: number) => (
               <View key={winner.id}>
                 <View style={styles.winnerCard}>
                   <View style={styles.winnerInfo}>

@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Search, CheckCircle2, Circle, Ticket, FileDown, UserX, FileSpreadsheet, CheckCheck } from 'lucide-react-native';
 import { useEvents } from '@/contexts/EventContext';
+import { Attendee } from '@/types';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import * as XLSX from 'xlsx';
@@ -28,9 +29,7 @@ export default function AttendeesListScreen() {
   const attendees = getEventAttendees(id);
 
   const primaryColor = event?.primaryColor || '#6366f1';
-  const secondaryColor = event?.secondaryColor || '#8b5cf6';
   const backgroundColor = event?.backgroundColor || '#f9fafb';
-  const textColor = event?.textColor || '#111827';
 
   if (!event) {
     return (
@@ -41,7 +40,7 @@ export default function AttendeesListScreen() {
   }
 
   const filteredAttendees = attendees
-    .filter((a) => {
+    .filter((a: Attendee) => {
       const matchesSearch =
         a.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         a.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -55,13 +54,13 @@ export default function AttendeesListScreen() {
       return matchesSearch;
     });
 
-  const checkedInCount = attendees.filter((a) => a.checkedIn).length;
+  const checkedInCount = attendees.filter((a: Attendee) => a.checkedIn).length;
 
   const getDuplicatesCount = () => {
     const seen = new Map<string, boolean>();
     let duplicateCount = 0;
 
-    attendees.forEach((attendee) => {
+    attendees.forEach((attendee: Attendee) => {
       const key = `${attendee.email.toLowerCase()}-${attendee.employeeNumber.toLowerCase()}`;
       
       if (seen.has(key)) {
@@ -115,7 +114,7 @@ export default function AttendeesListScreen() {
     report += `Pendientes: ${attendees.length - checkedInCount}\n\n`;
     report += `NOMBRE\tEMAIL\tTELÉFONO\tNÚM. EMPLEADO\tCHECK-IN\tHORA CHECK-IN\n`;
 
-    attendees.forEach((a) => {
+    attendees.forEach((a: Attendee) => {
       report += `${a.fullName}\t${a.email}\t${a.phone}\t${a.employeeNumber}\t${
         a.checkedIn ? 'SÍ' : 'NO'
       }\t${
@@ -138,8 +137,8 @@ export default function AttendeesListScreen() {
 
   const downloadExcelReport = async () => {
     try {
-      const checkedInAttendees = attendees.filter((a) => a.checkedIn);
-      const pendingAttendees = attendees.filter((a) => !a.checkedIn);
+      const checkedInAttendees = attendees.filter((a: Attendee) => a.checkedIn);
+      const pendingAttendees = attendees.filter((a: Attendee) => !a.checkedIn);
 
       const wb = XLSX.utils.book_new();
 
@@ -173,7 +172,7 @@ export default function AttendeesListScreen() {
         ['ASISTENTES EN EL EVENTO (Código Escaneado)'],
         [],
         ['NOMBRE', 'EMAIL', 'TELÉFONO', 'NÚM. EMPLEADO', 'HORA CHECK-IN'],
-        ...checkedInAttendees.map((a) => [
+        ...checkedInAttendees.map((a: Attendee) => [
           a.fullName,
           a.email,
           a.phone,
@@ -191,7 +190,7 @@ export default function AttendeesListScreen() {
         ['ASISTENTES PENDIENTES (No Escaneado)'],
         [],
         ['NOMBRE', 'EMAIL', 'TELÉFONO', 'NÚM. EMPLEADO'],
-        ...pendingAttendees.map((a) => [
+        ...pendingAttendees.map((a: Attendee) => [
           a.fullName,
           a.email,
           a.phone,
@@ -261,7 +260,7 @@ export default function AttendeesListScreen() {
   };
 
   const handleCheckInAll = () => {
-    const unregisteredCount = attendees.filter((a) => !a.checkedIn).length;
+    const unregisteredCount = attendees.filter((a: Attendee) => !a.checkedIn).length;
     
     if (unregisteredCount === 0) {
       Alert.alert('Información', 'Todos los invitados ya están registrados');

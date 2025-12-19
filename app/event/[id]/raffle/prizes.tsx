@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Gift, Plus, Trash2, Play, FileSpreadsheet, Award } from 'lucide-react-native';
 import { useEvents } from '@/contexts/EventContext';
-import { Prize } from '@/types';
+import { Prize, Attendee } from '@/types';
 import * as DocumentPicker from 'expo-document-picker';
 import * as XLSX from 'xlsx';
 
@@ -27,7 +27,7 @@ export default function PrizesScreen() {
   const event = getEventById(id);
   const prizes = useMemo(() => getEventPrizes(id), [getEventPrizes, id]);
   const attendees = useMemo(() => getEventAttendees(id), [getEventAttendees, id]);
-  const checkedInAttendees = attendees.filter((a) => a.checkedIn);
+  const checkedInAttendees = attendees.filter((a: Attendee) => a.checkedIn);
   const existingWinners = useMemo(() => getEventRaffleWinners(id), [getEventRaffleWinners, id]);
 
   const primaryColor = event?.primaryColor || '#6366f1';
@@ -51,6 +51,7 @@ export default function PrizesScreen() {
       name: prizeName.trim(),
       description: prizeDescription.trim(),
       imageUrl: prizeImageUrl.trim() || 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=400',
+      quantity: 1,
       createdAt: new Date().toISOString(),
     };
 
@@ -162,6 +163,7 @@ export default function PrizesScreen() {
           name: name,
           description: desc,
           imageUrl: image || 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=400',
+          quantity: 1,
           createdAt: new Date().toISOString(),
         });
       });
@@ -360,7 +362,7 @@ export default function PrizesScreen() {
 
           {prizes.length > 0 ? (
             <View style={styles.prizesList}>
-              {prizes.map((prize) => (
+              {prizes.map((prize: Prize) => (
                 <View key={prize.id} style={styles.prizeCard}>
                   <Image
                     source={{ uri: prize.imageUrl }}

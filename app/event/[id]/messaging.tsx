@@ -27,7 +27,7 @@ import {
 } from 'lucide-react-native';
 import { useEvents } from '@/contexts/EventContext';
 import { useMessaging } from '@/contexts/MessagingContext';
-import { MessageChannel, MessageTemplate, ScheduledMessage, AutomatedNotification, NotificationType } from '@/types';
+import { MessageChannel, MessageTemplate, ScheduledMessage, AutomatedNotification, NotificationType, Attendee } from '@/types';
 
 export default function MessagingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -182,7 +182,7 @@ export default function MessagingScreen() {
 
             scheduleMessage(newMessage);
 
-            const recipients = attendees.map((a) => ({
+            const recipients = attendees.map((a: Attendee) => ({
               id: a.id,
               name: a.fullName,
               email: a.email,
@@ -218,7 +218,7 @@ export default function MessagingScreen() {
         {
           text: 'Enviar',
           onPress: async () => {
-            const recipients = attendees.map((a) => ({
+            const recipients = attendees.map((a: Attendee) => ({
               id: a.id,
               name: a.fullName,
               email: a.email,
@@ -344,7 +344,7 @@ export default function MessagingScreen() {
 
             scheduleMessage(newMessage);
 
-            const recipients = attendees.map((a) => ({
+            const recipients = attendees.map((a: Attendee) => ({
               id: a.id,
               name: a.fullName,
               email: a.email,
@@ -387,13 +387,6 @@ export default function MessagingScreen() {
     setSendingTest((prev) => ({ ...prev, [notification.id]: true }));
     
     try {
-      const testRecipient = {
-        id: 'test',
-        name: 'Prueba',
-        email: email || undefined,
-        phone: phone || undefined,
-      };
-
       console.log(`📤 Enviando mensaje de prueba a:`);
       if (email) console.log(`📧 Email: ${email}`);
       if (phone) console.log(`📱 Teléfono: ${phone}`);

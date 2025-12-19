@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import createContextHook from '@nkzw/create-context-hook';
 import { User, UserRole, Organization, Permission, FeatureLimits, SubscriptionTier } from '@/types';
@@ -97,6 +97,11 @@ export const [UserProvider, useUser] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState(true);
 
   const guestLoginMutation = trpc.auth.guestLogin.useMutation();
+  const mutateAsyncRef = React.useRef(guestLoginMutation.mutateAsync);
+  
+  React.useEffect(() => {
+    mutateAsyncRef.current = guestLoginMutation.mutateAsync;
+  }, [guestLoginMutation.mutateAsync]);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -114,7 +119,7 @@ export const [UserProvider, useUser] = createContextHook(() => {
           setAuthToken(storedToken);
         } else {
           console.log('📝 No user found, creating guest user via API...');
-          const result = await guestLoginMutation.mutateAsync();
+          const result = await mutateAsyncRef.current();
           
           setUser(result.user as User);
           setAuthToken(result.token);
@@ -137,7 +142,7 @@ export const [UserProvider, useUser] = createContextHook(() => {
     };
 
     loadUserData();
-  }, [guestLoginMutation]);
+  }, []);
 
   const saveUser = useCallback(async (userData: User, token?: string) => {
     setUser(userData);

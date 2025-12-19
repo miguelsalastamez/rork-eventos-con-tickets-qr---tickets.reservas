@@ -150,7 +150,7 @@ export const [UserProvider, useUser] = createContextHook(() => {
     return () => {
       cancelled = true;
     };
-  }, [guestLoginMutation]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveUser = useCallback(async (userData: User, token?: string) => {
     setUser(userData);

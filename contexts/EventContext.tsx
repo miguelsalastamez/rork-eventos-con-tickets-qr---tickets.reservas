@@ -1,93 +1,58 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
 import { Event, Attendee, Prize, RaffleWinner } from '@/types';
-import { sampleEvents } from '@/mocks/sampleEvents';
-import { supabase } from '@/lib/supabase';
+import { trpc } from '@/lib/trpc';
 import { useUser } from './UserContext';
 
 export const [EventProvider, useEvents] = createContextHook(() => {
-  const { user, createDemoUser } = useUser();
-  const [events, setEvents] = useState<Event[]>([]);
-  const [attendees, setAttendees] = useState<Attendee[]>([]);
-  const [prizes, setPrizes] = useState<Prize[]>([]);
-  const [raffleWinners, setRaffleWinners] = useState<RaffleWinner[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { authToken } = useUser();
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const eventsQuery = trpc.event.list.useQuery(undefined, {
+    enabled: !!authToken,
+  });
 
-  const loadData = async () => {
-    try {
-      console.log('📚 Loading data from Supabase...');
-      
-      const [eventsRes, attendeesRes, prizesRes, winnersRes] = await Promise.all([
-        supabase.from('Event').select('*'),
-        supabase.from('Attendee').select('*'),
-        supabase.from('Prize').select('*'),
-        supabase.from('RaffleWinner').select('*'),
-      ]);
+  const createEventMutation = trpc.event.create.useMutation({
+    onSuccess: () => {
+      eventsQuery.refetch();
+    },
+  });
 
-      if (eventsRes.data) {
-        console.log('✅ Loaded', eventsRes.data.length, 'events from Supabase');
-        setEvents(eventsRes.data as Event[]);
-      }
-      if (attendeesRes.data) setAttendees(attendeesRes.data as Attendee[]);
-      if (prizesRes.data) setPrizes(prizesRes.data as Prize[]);
-      if (winnersRes.data) setRaffleWinners(winnersRes.data as RaffleWinner[]);
-    } catch (error) {
-      console.error('❌ Error loading data from Supabase:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const updateEventMutation = trpc.event.update.useMutation({
+    onSuccess: () => {
+      eventsQuery.refetch();
+    },
+  });
+
+  const deleteEventMutation = trpc.event.delete.useMutation({
+    onSuccess: () => {
+      eventsQuery.refetch();
+    },
+  });
+
+  const createAttendeeMutation = trpc.attendee.create.useMutation();
+  const createManyAttendeesMutation = trpc.attendee.createMany.useMutation();
+  const checkInMutation = trpc.attendee.checkIn.useMutation();
+  const toggleCheckInMutation = trpc.attendee.toggleCheckIn.useMutation();
+  const checkInAllMutation = trpc.attendee.checkInAll.useMutation();
+  const removeDuplicatesMutation = trpc.attendee.removeDuplicates.useMutation();
+
+  const createPrizeMutation = trpc.event.prizes.create.useMutation();
+  const createManyPrizesMutation = trpc.event.prizes.createMany.useMutation();
+  const deletePrizeMutation = trpc.event.prizes.delete.useMutation();
+
+  const addRaffleWinnerMutation = trpc.event.raffle.addWinner.useMutation();
+  const addRaffleWinnersMutation = trpc.event.raffle.addWinners.useMutation();
+  const deleteRaffleWinnerMutation = trpc.event.raffle.deleteWinner.useMutation();
+  const deleteAllRaffleWinnersMutation = trpc.event.raffle.deleteAll.useMutation();
+
+  const events = useMemo(() => eventsQuery.data || [], [eventsQuery.data]);
+  const isLoading = eventsQuery.isLoading;
 
   const addEvent = useCallback(async (event: Omit<Event, 'id' | 'createdAt'>) => {
-    console.log('🎉 Creating event in Supabase:', event);
+    console.log('🎉 Creating event via API:', event);
     
     try {
-      let currentUser = user;
-      if (!currentUser) {
-        console.log('⚠️ No user found, creating demo user...');
-        currentUser = await createDemoUser();
-      }
-
-      const { data: existingUser, error: userCheckError } = await supabase
-        .from('User')
-        .select('id')
-        .eq('id', currentUser.id)
-        .single();
-
-      if (userCheckError || !existingUser) {
-        console.log('⚠️ User not found in Supabase, creating...');
-        const now = new Date().toISOString();
-        const { error: userInsertError } = await supabase
-          .from('User')
-          .upsert({
-            id: currentUser.id,
-            email: currentUser.email,
-            password: 'placeholder',
-            fullName: currentUser.fullName,
-            phone: currentUser.phone,
-            role: currentUser.role,
-            organizationId: currentUser.organizationId,
-            createdAt: currentUser.createdAt,
-            updatedAt: now,
-          });
-        
-        if (userInsertError) {
-          console.error('❌ Failed to create user in Supabase:', userInsertError);
-          throw new Error(`Failed to ensure user exists: ${userInsertError.message}`);
-        }
-        console.log('✅ User created in Supabase:', currentUser.id);
-      }
-
-      const id = `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      const now = new Date().toISOString();
-      
-      const eventData: any = {
-        id,
+      const result = await createEventMutation.mutateAsync({
         name: event.name,
         description: event.description,
         date: event.date,
@@ -95,44 +60,27 @@ export const [EventProvider, useEvents] = createContextHook(() => {
         venueName: event.venueName,
         location: event.location,
         imageUrl: event.imageUrl,
+        organizerLogoUrl: event.organizerLogoUrl,
+        venuePlanUrl: event.venuePlanUrl,
+        employeeNumberLabel: event.employeeNumberLabel,
         successSoundId: event.successSoundId,
         errorSoundId: event.errorSoundId,
         vibrationEnabled: event.vibrationEnabled,
         vibrationIntensity: event.vibrationIntensity,
-        createdBy: currentUser.id,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      if (event.organizerLogoUrl) eventData.organizerLogoUrl = event.organizerLogoUrl;
-      if (event.venuePlanUrl) eventData.venuePlanUrl = event.venuePlanUrl;
-      if (event.employeeNumberLabel) eventData.employeeNumberLabel = event.employeeNumberLabel;
-      if (event.primaryColor) eventData.primaryColor = event.primaryColor;
-      if (event.secondaryColor) eventData.secondaryColor = event.secondaryColor;
-      if (event.organizationId) eventData.organizationId = event.organizationId;
-
-      console.log('📤 Sending to Supabase:', eventData);
-
-      const { data, error } = await supabase
-        .from('Event')
-        .insert(eventData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('❌ Supabase error details:', JSON.stringify(error, null, 2));
-        throw new Error(`Failed to save event: ${error.message || JSON.stringify(error)}`);
-      }
+        primaryColor: event.primaryColor,
+        secondaryColor: event.secondaryColor,
+        accentColor: event.accentColor,
+        organizationId: event.organizationId,
+      });
       
-      console.log('✅ Event saved successfully to Supabase:', data);
-      setEvents((prev) => [...prev, data as Event]);
-      return data;
+      console.log('✅ Event created successfully:', result);
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error('❌ Failed to save event to Supabase:', errorMessage);
+      console.error('❌ Failed to create event:', errorMessage);
       throw new Error(errorMessage);
     }
-  }, [user, createDemoUser]);
+  }, [createEventMutation]);
 
   const getOrganizationEvents = useCallback((organizationId: string) => {
     return events.filter((e) => e.organizationId === organizationId);
@@ -146,195 +94,145 @@ export const [EventProvider, useEvents] = createContextHook(() => {
     console.log('🔄 Updating event:', eventId, updates);
     
     try {
-      const { error } = await supabase
-        .from('Event')
-        .update(updates)
-        .eq('id', eventId);
-
-      if (error) throw error;
-
-      setEvents((prev) => prev.map((e) => (e.id === eventId ? { ...e, ...updates } : e)));
+      await updateEventMutation.mutateAsync({
+        id: eventId,
+        name: updates.name,
+        description: updates.description,
+        date: updates.date,
+        time: updates.time,
+        venueName: updates.venueName,
+        location: updates.location,
+        imageUrl: updates.imageUrl,
+        organizerLogoUrl: updates.organizerLogoUrl,
+        venuePlanUrl: updates.venuePlanUrl,
+        employeeNumberLabel: updates.employeeNumberLabel,
+        successSoundId: updates.successSoundId,
+        errorSoundId: updates.errorSoundId,
+        vibrationEnabled: updates.vibrationEnabled,
+        vibrationIntensity: updates.vibrationIntensity,
+        primaryColor: updates.primaryColor,
+        secondaryColor: updates.secondaryColor,
+        accentColor: updates.accentColor,
+      });
       console.log('✅ Event updated successfully');
     } catch (error) {
       console.error('❌ Failed to update event:', error);
       throw error;
     }
-  }, []);
+  }, [updateEventMutation]);
 
   const deleteEvent = useCallback(async (eventId: string) => {
     try {
-      const { error } = await supabase.from('Event').delete().eq('id', eventId);
-      if (error) throw error;
-
-      setEvents((prev) => prev.filter((e) => e.id !== eventId));
-      setAttendees((prev) => prev.filter((a) => a.eventId !== eventId));
+      await deleteEventMutation.mutateAsync({ id: eventId });
     } catch (error) {
       console.error('❌ Failed to delete event:', error);
       throw error;
     }
-  }, []);
+  }, [deleteEventMutation]);
 
   const addAttendee = useCallback(async (attendee: Attendee) => {
     try {
-      const attendeeData = {
-        ...attendee,
-        id: attendee.id || `attendee-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      };
-
-      const { data, error } = await supabase
-        .from('Attendee')
-        .insert(attendeeData)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setAttendees((prev) => [...prev, data as Attendee]);
+      const result = await createAttendeeMutation.mutateAsync({
+        eventId: attendee.eventId,
+        fullName: attendee.fullName,
+        email: attendee.email,
+        employeeNumber: attendee.employeeNumber,
+        ticketCode: attendee.ticketCode,
+      });
+      
+      eventsQuery.refetch();
+      return result;
     } catch (error) {
       console.error('❌ Failed to add attendee:', error);
       throw error;
     }
-  }, []);
+  }, [createAttendeeMutation, eventsQuery]);
 
   const addMultipleAttendees = useCallback(async (newAttendees: Attendee[]) => {
     try {
-      const attendeesWithIds = newAttendees.map(a => ({
-        ...a,
-        id: a.id || `attendee-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      }));
-
-      const { data, error } = await supabase
-        .from('Attendee')
-        .insert(attendeesWithIds)
-        .select();
-
-      if (error) throw error;
-
-      setAttendees((prev) => [...prev, ...(data as Attendee[])]);
+      await createManyAttendeesMutation.mutateAsync({
+        attendees: newAttendees.map(a => ({
+          eventId: a.eventId,
+          fullName: a.fullName,
+          email: a.email,
+          employeeNumber: a.employeeNumber,
+          ticketCode: a.ticketCode,
+        })),
+      });
+      
+      eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to add multiple attendees:', error);
       throw error;
     }
-  }, []);
+  }, [createManyAttendeesMutation, eventsQuery]);
 
   const checkInAttendee = useCallback(async (attendeeId: string) => {
     try {
-      const { error } = await supabase
-        .from('Attendee')
-        .update({ checkedIn: true, checkedInAt: new Date().toISOString() })
-        .eq('id', attendeeId);
-
-      if (error) throw error;
-
-      setAttendees((prev) =>
-        prev.map((a) =>
-          a.id === attendeeId ? { ...a, checkedIn: true, checkedInAt: new Date().toISOString() } : a
-        )
+      const event = events.find(e => 
+        e.attendees?.some((a: any) => a.id === attendeeId)
       );
+      
+      if (!event) {
+        throw new Error('Event not found for attendee');
+      }
+
+      const attendee = event.attendees?.find((a: any) => a.id === attendeeId);
+      if (!attendee) {
+        throw new Error('Attendee not found');
+      }
+
+      await checkInMutation.mutateAsync({ ticketCode: attendee.ticketCode });
+      eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to check in attendee:', error);
       throw error;
     }
-  }, []);
+  }, [checkInMutation, events, eventsQuery]);
 
   const toggleCheckInAttendee = useCallback(async (attendeeId: string) => {
     try {
-      const attendee = attendees.find((a) => a.id === attendeeId);
-      if (!attendee) return;
-
-      const updates = attendee.checkedIn
-        ? { checkedIn: false, checkedInAt: undefined }
-        : { checkedIn: true, checkedInAt: new Date().toISOString() };
-
-      const { error } = await supabase
-        .from('Attendee')
-        .update(updates)
-        .eq('id', attendeeId);
-
-      if (error) throw error;
-
-      setAttendees((prev) =>
-        prev.map((a) => (a.id === attendeeId ? { ...a, ...updates } : a))
-      );
+      await toggleCheckInMutation.mutateAsync({ id: attendeeId });
+      eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to toggle check in:', error);
       throw error;
     }
-  }, [attendees]);
+  }, [toggleCheckInMutation, eventsQuery]);
 
   const checkInAllAttendees = useCallback(async (eventId: string) => {
     try {
-      const { error } = await supabase
-        .from('Attendee')
-        .update({ checkedIn: true, checkedInAt: new Date().toISOString() })
-        .eq('eventId', eventId)
-        .eq('checkedIn', false);
-
-      if (error) throw error;
-
-      setAttendees((prev) =>
-        prev.map((a) =>
-          a.eventId === eventId && !a.checkedIn
-            ? { ...a, checkedIn: true, checkedInAt: new Date().toISOString() }
-            : a
-        )
-      );
+      await checkInAllMutation.mutateAsync({ eventId });
+      eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to check in all attendees:', error);
       throw error;
     }
-  }, []);
+  }, [checkInAllMutation, eventsQuery]);
 
   const removeDuplicates = useCallback(async (eventId: string) => {
-    const eventAttendees = attendees.filter((a) => a.eventId === eventId);
-    
-    const uniqueAttendees = eventAttendees.reduce((acc, current) => {
-      const existingIndex = acc.findIndex((a) => a.email.toLowerCase() === current.email.toLowerCase());
-      
-      if (existingIndex === -1) {
-        acc.push(current);
-      } else {
-        const existing = acc[existingIndex];
-        if (current.checkedIn && !existing.checkedIn) {
-          acc[existingIndex] = current;
-        } else if (new Date(current.checkedInAt || 0) > new Date(existing.checkedInAt || 0)) {
-          acc[existingIndex] = current;
-        }
-      }
-      
-      return acc;
-    }, [] as Attendee[]);
-
-    const duplicateIds = eventAttendees
-      .filter((a) => !uniqueAttendees.find((u) => u.id === a.id))
-      .map((a) => a.id);
-
-    if (duplicateIds.length > 0) {
-      try {
-        const { error } = await supabase
-          .from('Attendee')
-          .delete()
-          .in('id', duplicateIds);
-
-        if (error) throw error;
-
-        setAttendees((prev) => prev.filter((a) => !duplicateIds.includes(a.id)));
-      } catch (error) {
-        console.error('❌ Failed to remove duplicates:', error);
-        throw error;
-      }
+    try {
+      const result = await removeDuplicatesMutation.mutateAsync({ eventId });
+      eventsQuery.refetch();
+      return result.removed;
+    } catch (error) {
+      console.error('❌ Failed to remove duplicates:', error);
+      throw error;
     }
-    
-    return eventAttendees.length - uniqueAttendees.length;
-  }, [attendees]);
+  }, [removeDuplicatesMutation, eventsQuery]);
 
   const getEventAttendees = useCallback((eventId: string) => {
-    return attendees.filter((a) => a.eventId === eventId);
-  }, [attendees]);
+    const event = events.find((e) => e.id === eventId);
+    return event?.attendees || [];
+  }, [events]);
 
   const getAttendeeByTicketCode = useCallback((ticketCode: string) => {
-    return attendees.find((a) => a.ticketCode === ticketCode);
-  }, [attendees]);
+    for (const event of events) {
+      const attendee = event.attendees?.find((a: any) => a.ticketCode === ticketCode);
+      if (attendee) return attendee;
+    }
+    return undefined;
+  }, [events]);
 
   const getEventById = useCallback((eventId: string) => {
     return events.find((e) => e.id === eventId);
@@ -342,174 +240,128 @@ export const [EventProvider, useEvents] = createContextHook(() => {
 
   const addPrize = useCallback(async (prize: Prize) => {
     try {
-      const prizeData = {
-        ...prize,
-        id: prize.id || `prize-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      };
-
-      const { data, error } = await supabase
-        .from('Prize')
-        .insert(prizeData)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setPrizes((prev) => [...prev, data as Prize]);
+      await createPrizeMutation.mutateAsync({
+        eventId: prize.eventId,
+        name: prize.name,
+        description: prize.description,
+        imageUrl: prize.imageUrl,
+        quantity: prize.quantity,
+      });
+      
+      eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to add prize:', error);
       throw error;
     }
-  }, []);
+  }, [createPrizeMutation, eventsQuery]);
 
   const addMultiplePrizes = useCallback(async (newPrizes: Prize[]) => {
     try {
-      const prizesWithIds = newPrizes.map(p => ({
-        ...p,
-        id: p.id || `prize-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      }));
-
-      const { data, error } = await supabase
-        .from('Prize')
-        .insert(prizesWithIds)
-        .select();
-
-      if (error) throw error;
-
-      setPrizes((prev) => [...prev, ...(data as Prize[])]);
+      await createManyPrizesMutation.mutateAsync({
+        prizes: newPrizes.map(p => ({
+          eventId: p.eventId,
+          name: p.name,
+          description: p.description,
+          imageUrl: p.imageUrl,
+          quantity: p.quantity,
+        })),
+      });
+      
+      eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to add multiple prizes:', error);
       throw error;
     }
-  }, []);
+  }, [createManyPrizesMutation, eventsQuery]);
 
   const deletePrize = useCallback(async (prizeId: string) => {
     try {
-      const { error } = await supabase.from('Prize').delete().eq('id', prizeId);
-      if (error) throw error;
-
-      setPrizes((prev) => prev.filter((p) => p.id !== prizeId));
+      await deletePrizeMutation.mutateAsync({ id: prizeId });
+      eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to delete prize:', error);
       throw error;
     }
-  }, []);
+  }, [deletePrizeMutation, eventsQuery]);
 
   const getEventPrizes = useCallback((eventId: string) => {
-    return prizes.filter((p) => p.eventId === eventId);
-  }, [prizes]);
+    const event = events.find((e) => e.id === eventId);
+    return event?.prizes || [];
+  }, [events]);
 
   const addRaffleWinner = useCallback(async (winner: RaffleWinner) => {
     try {
-      const winnerData = {
-        ...winner,
-        id: winner.id || `winner-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      };
-
-      const { data, error } = await supabase
-        .from('RaffleWinner')
-        .insert(winnerData)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setRaffleWinners((prev) => [...prev, data as RaffleWinner]);
+      await addRaffleWinnerMutation.mutateAsync({
+        eventId: winner.eventId,
+        prizeId: winner.prizeId,
+        attendeeId: winner.attendeeId,
+      });
+      
+      eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to add raffle winner:', error);
       throw error;
     }
-  }, []);
+  }, [addRaffleWinnerMutation, eventsQuery]);
 
   const addMultipleRaffleWinners = useCallback(async (newWinners: RaffleWinner[]) => {
     try {
-      const winnersWithIds = newWinners.map(w => ({
-        ...w,
-        id: w.id || `winner-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      }));
-
-      const { data, error } = await supabase
-        .from('RaffleWinner')
-        .insert(winnersWithIds)
-        .select();
-
-      if (error) throw error;
-
-      setRaffleWinners((prev) => [...prev, ...(data as RaffleWinner[])]);
+      await addRaffleWinnersMutation.mutateAsync({
+        winners: newWinners.map(w => ({
+          eventId: w.eventId,
+          prizeId: w.prizeId,
+          attendeeId: w.attendeeId,
+        })),
+      });
+      
+      eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to add multiple raffle winners:', error);
       throw error;
     }
-  }, []);
+  }, [addRaffleWinnersMutation, eventsQuery]);
 
   const getEventRaffleWinners = useCallback((eventId: string) => {
-    return raffleWinners.filter((w) => w.eventId === eventId);
-  }, [raffleWinners]);
+    const event = events.find((e) => e.id === eventId);
+    return event?.raffleWinners || [];
+  }, [events]);
 
   const deleteRaffleWinner = useCallback(async (winnerId: string) => {
     try {
-      const { error } = await supabase.from('RaffleWinner').delete().eq('id', winnerId);
-      if (error) throw error;
-
-      setRaffleWinners((prev) => prev.filter((w) => w.id !== winnerId));
+      await deleteRaffleWinnerMutation.mutateAsync({ id: winnerId });
+      eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to delete raffle winner:', error);
       throw error;
     }
-  }, []);
+  }, [deleteRaffleWinnerMutation, eventsQuery]);
 
   const deleteAllRaffleWinners = useCallback(async (eventId: string) => {
     try {
-      const { error } = await supabase.from('RaffleWinner').delete().eq('eventId', eventId);
-      if (error) throw error;
-
-      setRaffleWinners((prev) => prev.filter((w) => w.eventId !== eventId));
+      await deleteAllRaffleWinnersMutation.mutateAsync({ eventId });
+      eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to delete all raffle winners:', error);
       throw error;
     }
-  }, []);
+  }, [deleteAllRaffleWinnersMutation, eventsQuery]);
 
   const loadSampleData = useCallback(async () => {
-    console.log('📦 Loading sample data...');
-    try {
-      const allAttendees: Attendee[] = [];
-      
-      sampleEvents.forEach((event: any) => {
-        if (event.attendees && Array.isArray(event.attendees)) {
-          allAttendees.push(...event.attendees);
-        }
-      });
-
-      const eventsWithoutAttendees = sampleEvents.map((event) => {
-        const copy = { ...event } as any;
-        delete copy.attendees;
-        return copy;
-      });
-
-      const { data: eventData, error: eventError } = await supabase
-        .from('Event')
-        .insert(eventsWithoutAttendees)
-        .select();
-
-      if (eventError) throw eventError;
-
-      const { data: attendeeData, error: attendeeError } = await supabase
-        .from('Attendee')
-        .insert(allAttendees)
-        .select();
-
-      if (attendeeError) throw attendeeError;
-
-      setEvents(eventData as Event[]);
-      setAttendees(attendeeData as Attendee[]);
-
-      console.log('✅ Sample data loaded successfully');
-    } catch (error) {
-      console.error('❌ Error loading sample data:', error);
-      throw error;
-    }
+    console.log('📦 Sample data loading is not supported in API mode');
+    throw new Error('Sample data loading is not available');
   }, []);
+
+  const attendees = useMemo(() => {
+    return events.flatMap(e => e.attendees || []);
+  }, [events]);
+
+  const prizes = useMemo(() => {
+    return events.flatMap(e => e.prizes || []);
+  }, [events]);
+
+  const raffleWinners = useMemo(() => {
+    return events.flatMap(e => e.raffleWinners || []);
+  }, [events]);
 
   return useMemo(() => ({
     events,

@@ -6,26 +6,33 @@ export const ticketRouter = createTRPCRouter({
   list: publicProcedure
     .input(z.object({ eventId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const tickets = await ctx.prisma.ticket.findMany({
-        where: { eventId: input.eventId, isActive: true },
-        orderBy: { createdAt: "desc" },
-      });
+      const { data, error } = await ctx.supabase
+        .from("Ticket")
+        .select("*")
+        .eq("eventId", input.eventId)
+        .eq("isActive", true)
+        .order("createdAt", { ascending: false });
 
-      return tickets;
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+
+      return data || [];
     }),
 
   get: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const ticket = await ctx.prisma.ticket.findUnique({
-        where: { id: input.id },
-        include: {
-          event: true,
-          pool: true,
-        },
-      });
+      const { data: ticket, error } = await ctx.supabase
+        .from("Ticket")
+        .select("*, event:Event(*), pool:CapacityPool(*)")
+        .eq("id", input.id)
+        .single();
 
-      if (!ticket) {
+      if (error || !ticket) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Ticket not found",
@@ -47,15 +54,17 @@ export const ticketRouter = createTRPCRouter({
         capacityType: z.enum(["unlimited", "dedicated", "shared"]),
         dedicatedCapacity: z.number().optional(),
         sharedCapacityPoolId: z.string().optional(),
-        saleStartDate: z.date(),
-        saleEndDate: z.date(),
+        saleStartDate: z.string(),
+        saleEndDate: z.string(),
         formFields: z.any().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const event = await ctx.prisma.event.findUnique({
-        where: { id: input.eventId },
-      });
+      const { data: event } = await ctx.supabase
+        .from("Event")
+        .select("createdBy")
+        .eq("id", input.eventId)
+        .single();
 
       if (!event) {
         throw new TRPCError({
@@ -71,11 +80,30 @@ export const ticketRouter = createTRPCRouter({
         });
       }
 
-      const ticket = await ctx.prisma.ticket.create({
-        data: input,
-      });
+      const ticketId = `ticket-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const now = new Date().toISOString();
 
-      return ticket;
+      const { data, error } = await ctx.supabase
+        .from("Ticket")
+        .insert({
+          id: ticketId,
+          ...input,
+          soldCount: 0,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+
+      return data;
     }),
 
   update: protectedProcedure
@@ -93,10 +121,11 @@ export const ticketRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const ticket = await ctx.prisma.ticket.findUnique({
-        where: { id: input.id },
-        include: { event: true },
-      });
+      const { data: ticket } = await ctx.supabase
+        .from("Ticket")
+        .select("*, event:Event(createdBy)")
+        .eq("id", input.id)
+        .single();
 
       if (!ticket) {
         throw new TRPCError({
@@ -113,11 +142,20 @@ export const ticketRouter = createTRPCRouter({
       }
 
       const { id, ...updateData } = input;
-      const updatedTicket = await ctx.prisma.ticket.update({
-        where: { id },
-        data: updateData,
-      });
+      const { data, error } = await ctx.supabase
+        .from("Ticket")
+        .update({ ...updateData, updatedAt: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
 
-      return updatedTicket;
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+
+      return data;
     }),
 });

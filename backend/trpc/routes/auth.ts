@@ -17,9 +17,11 @@ export const authRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const existingUser = await ctx.prisma.user.findUnique({
-        where: { email: input.email },
-      });
+      const { data: existingUser } = await ctx.supabase
+        .from("User")
+        .select("id")
+        .eq("email", input.email)
+        .single();
 
       if (existingUser) {
         throw new TRPCError({
@@ -29,15 +31,29 @@ export const authRouter = createTRPCRouter({
       }
 
       const hashedPassword = await bcrypt.hash(input.password, 10);
+      const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      const user = await ctx.prisma.user.create({
-        data: {
+      const { data: user, error } = await ctx.supabase
+        .from("User")
+        .insert({
+          id: userId,
           email: input.email,
           password: hashedPassword,
           fullName: input.fullName,
           phone: input.phone,
-        },
-      });
+          role: "viewer",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
 
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
         expiresIn: "30d",
@@ -63,11 +79,13 @@ export const authRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const user = await ctx.prisma.user.findUnique({
-        where: { email: input.email },
-      });
+      const { data: user, error } = await ctx.supabase
+        .from("User")
+        .select("*")
+        .eq("email", input.email)
+        .single();
 
-      if (!user) {
+      if (error || !user) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid email or password",
@@ -100,14 +118,13 @@ export const authRouter = createTRPCRouter({
     }),
 
   me: protectedProcedure.query(async ({ ctx }) => {
-    const user = await ctx.prisma.user.findUnique({
-      where: { id: ctx.userId },
-      include: {
-        organization: true,
-      },
-    });
+    const { data: user, error } = await ctx.supabase
+      .from("User")
+      .select("*, organization:Organization(*)")
+      .eq("id", ctx.userId)
+      .single();
 
-    if (!user) {
+    if (error || !user) {
       throw new TRPCError({
         code: "NOT_FOUND",
         message: "User not found",
@@ -121,6 +138,47 @@ export const authRouter = createTRPCRouter({
       phone: user.phone,
       role: user.role,
       organization: user.organization,
+    };
+  }),
+
+  guestLogin: publicProcedure.mutation(async ({ ctx }) => {
+    const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const email = `guest-${Date.now()}@example.com`;
+
+    const { data: user, error } = await ctx.supabase
+      .from("User")
+      .insert({
+        id: userId,
+        email,
+        password: "placeholder",
+        fullName: "Demo User",
+        role: "seller_admin",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
+    }
+
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
+      expiresIn: "30d",
+    });
+
+    return {
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        phone: user.phone,
+        role: user.role,
+      },
     };
   }),
 });

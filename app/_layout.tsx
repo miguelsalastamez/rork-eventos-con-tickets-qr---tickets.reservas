@@ -9,10 +9,18 @@ import { SettingsProvider } from "@/contexts/SettingsContext";
 import { MessagingProvider } from "@/contexts/MessagingContext";
 import { UserProvider } from "@/contexts/UserContext";
 import { TicketProvider } from "@/contexts/TicketContext";
+import { trpc, trpcClient } from "@/lib/trpc";
 
 SplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -178,21 +186,23 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <UserProvider>
-          <SettingsProvider>
-            <EventProvider>
-              <TicketProvider>
-                <MessagingProvider>
-                  <GestureHandlerRootView style={{ flex: 1 }}>
-                    <RootLayoutNav />
-                  </GestureHandlerRootView>
-                </MessagingProvider>
-              </TicketProvider>
-            </EventProvider>
-          </SettingsProvider>
-        </UserProvider>
-      </QueryClientProvider>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <UserProvider>
+            <SettingsProvider>
+              <EventProvider>
+                <TicketProvider>
+                  <MessagingProvider>
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                      <RootLayoutNav />
+                    </GestureHandlerRootView>
+                  </MessagingProvider>
+                </TicketProvider>
+              </EventProvider>
+            </SettingsProvider>
+          </UserProvider>
+        </QueryClientProvider>
+      </trpc.Provider>
     </ErrorBoundary>
   );
 }

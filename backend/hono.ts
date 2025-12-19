@@ -1,12 +1,15 @@
 import { trpcServer } from "@hono/trpc-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { PrismaClient } from "@prisma/client";
+import { createClient } from "@supabase/supabase-js";
 
 import { appRouter } from "./trpc/app-router";
 import { createContext } from "./trpc/create-context";
 
-const prisma = new PrismaClient();
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "https://qaiaigeskomvqvcvgobo.supabase.co";
+const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_ZPA_pYdnkoZ9l6RecVFZ0Q_KnLj61Ms";
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const app = new Hono();
 
@@ -27,8 +30,8 @@ app.use(
 app.get("/", async (c) => {
   let dbStatus = "disconnected";
   try {
-    await prisma.$queryRaw`SELECT 1`;
-    dbStatus = "connected";
+    const { error } = await supabase.from("Event").select("id").limit(1);
+    dbStatus = error ? "disconnected" : "connected";
   } catch (error) {
     console.error("Database connection error:", error);
   }

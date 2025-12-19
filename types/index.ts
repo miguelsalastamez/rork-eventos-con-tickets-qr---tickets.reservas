@@ -16,11 +16,17 @@ export interface Event {
   vibrationIntensity?: 'light' | 'medium' | 'heavy';
   primaryColor?: string;
   secondaryColor?: string;
+  accentColor?: string;
   backgroundColor?: string;
   textColor?: string;
   organizationId?: string;
   createdBy: string;
   createdAt: string;
+  attendees?: Attendee[];
+  prizes?: Prize[];
+  raffleWinners?: any[];
+  tickets?: any[];
+  organization?: any;
 }
 
 export interface Attendee {
@@ -45,9 +51,10 @@ export interface Prize {
   id: string;
   eventId: string;
   name: string;
-  description: string;
-  imageUrl: string;
-  createdAt: string;
+  description?: string;
+  imageUrl?: string;
+  quantity: number;
+  createdAt?: string;
 }
 
 export interface RaffleWinner {

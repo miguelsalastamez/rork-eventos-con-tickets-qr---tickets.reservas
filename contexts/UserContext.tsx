@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import createContextHook from '@nkzw/create-context-hook';
 import { User, UserRole, Organization, Permission, FeatureLimits, SubscriptionTier } from '@/types';
-import { supabase } from '@/lib/supabase';
+import { trpc } from '@/lib/trpc';
 
 const USER_STORAGE_KEY = '@eventpass_user';
 const AUTH_TOKEN_STORAGE_KEY = '@eventpass_auth_token';
@@ -96,6 +96,8 @@ export const [UserProvider, useUser] = createContextHook(() => {
   const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>('free');
   const [isLoading, setIsLoading] = useState(true);
 
+  const guestLoginMutation = trpc.auth.guestLogin.useMutation();
+
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -106,78 +108,38 @@ export const [UserProvider, useUser] = createContextHook(() => {
           AsyncStorage.getItem(SUBSCRIPTION_TIER_STORAGE_KEY),
         ]);
 
-        if (storedUser) {
+        if (storedUser && storedToken) {
+          console.log('✅ Loaded user from storage');
           setUser(JSON.parse(storedUser));
+          setAuthToken(storedToken);
         } else {
-          console.log('No user found in AsyncStorage, creating demo user');
-          const demoUser: User = {
-            id: `user-${Date.now()}`,
-            email: 'demo@example.com',
-            fullName: 'Demo User',
-            phone: undefined,
-            role: 'seller_admin',
-            organizationId: undefined,
-            createdAt: new Date().toISOString(),
-          };
+          console.log('📝 No user found, creating guest user via API...');
+          const result = await guestLoginMutation.mutateAsync();
           
-          try {
-            await supabase
-              .from('User')
-              .upsert({
-                id: demoUser.id,
-                email: demoUser.email,
-                password: 'placeholder',
-                fullName: demoUser.fullName,
-                phone: demoUser.phone,
-                role: demoUser.role,
-                organizationId: demoUser.organizationId,
-                createdAt: demoUser.createdAt,
-              });
-            console.log('✅ User saved to Supabase:', demoUser.id);
-          } catch (error) {
-            console.error('❌ Error syncing user to Supabase:', error);
-          }
-
-          setUser(demoUser);
-          await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(demoUser));
+          setUser(result.user as User);
+          setAuthToken(result.token);
+          
+          await Promise.all([
+            AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(result.user)),
+            AsyncStorage.setItem(AUTH_TOKEN_STORAGE_KEY, result.token),
+          ]);
+          
+          console.log('✅ Guest user created:', result.user.id);
         }
-        if (storedToken) setAuthToken(storedToken);
+
         if (storedOrgs) setOrganizations(JSON.parse(storedOrgs));
         if (storedTier) setSubscriptionTier(storedTier as SubscriptionTier);
       } catch (error) {
-        console.error('Error loading user data:', error);
+        console.error('❌ Error loading user data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
     loadUserData();
-  }, []);
+  }, [guestLoginMutation]);
 
   const saveUser = useCallback(async (userData: User, token?: string) => {
-    try {
-      const { error } = await supabase
-        .from('User')
-        .upsert({
-          id: userData.id,
-          email: userData.email,
-          password: 'placeholder',
-          fullName: userData.fullName,
-          phone: userData.phone,
-          role: userData.role,
-          organizationId: userData.organizationId,
-          createdAt: userData.createdAt,
-        });
-
-      if (error) {
-        console.error('❌ Error saving user to Supabase:', error);
-      } else {
-        console.log('✅ User saved to Supabase:', userData.id);
-      }
-    } catch (error) {
-      console.error('❌ Error syncing user to Supabase:', error);
-    }
-
     setUser(userData);
     await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
     
@@ -198,39 +160,24 @@ export const [UserProvider, useUser] = createContextHook(() => {
 
   const createDemoUser = useCallback(async (role: UserRole = 'seller_admin', organizationId?: string): Promise<User> => {
     console.log('🔨 Creating demo user with role:', role);
-    const demoUser: User = {
-      id: `user-${Date.now()}`,
-      email: 'demo@example.com',
-      fullName: 'Demo User',
-      phone: undefined,
-      role,
-      organizationId,
-      createdAt: new Date().toISOString(),
-    };
     
     try {
-      await supabase
-        .from('User')
-        .upsert({
-          id: demoUser.id,
-          email: demoUser.email,
-          password: 'placeholder',
-          fullName: demoUser.fullName,
-          phone: demoUser.phone,
-          role: demoUser.role,
-          organizationId: demoUser.organizationId,
-          createdAt: demoUser.createdAt,
-        });
-      console.log('✅ User saved to Supabase:', demoUser.id);
+      const result = await guestLoginMutation.mutateAsync();
+      
+      const demoUser = {
+        ...result.user,
+        role,
+        organizationId,
+      } as User;
+      
+      await saveUser(demoUser, result.token);
+      console.log('✅ Demo user created:', demoUser.id);
+      return demoUser;
     } catch (error) {
-      console.error('❌ Error syncing user to Supabase:', error);
+      console.error('❌ Error creating demo user:', error);
+      throw error;
     }
-
-    setUser(demoUser);
-    await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(demoUser));
-    console.log('✅ Demo user created:', demoUser.id);
-    return demoUser;
-  }, []);
+  }, [guestLoginMutation, saveUser]);
 
   const setUserRole = useCallback(async (role: UserRole) => {
     if (!user) {

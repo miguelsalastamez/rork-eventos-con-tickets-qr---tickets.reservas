@@ -3,8 +3,8 @@ import { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import superjson from "superjson";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "https://qaiaigeskomvqvcvgobo.supabase.co";
-const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_ZPA_pYdnkoZ9l6RecVFZ0Q_KnLj61Ms";
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
+const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -14,15 +14,15 @@ const DEFAULT_TEST_TOKEN = "test-token-default";
 export const createContext = async (opts: FetchCreateContextFnOptions) => {
   const authHeader = opts.req.headers.get("Authorization");
   const token = authHeader?.replace("Bearer ", "");
-  
+
   console.log("🔐 Auth token:", token ? token.substring(0, 20) + "..." : "none");
-  
+
   let userId = DEFAULT_TEST_USER_ID;
-  
+
   if (token && token !== DEFAULT_TEST_TOKEN) {
     console.log("⚠️ Non-default token provided, but using default user for testing");
   }
-  
+
   console.log("✅ Using user ID:", userId);
 
   return {

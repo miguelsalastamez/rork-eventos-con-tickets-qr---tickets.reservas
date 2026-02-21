@@ -50,7 +50,7 @@ export const [EventProvider, useEvents] = createContextHook(() => {
 
   const addEvent = useCallback(async (event: Omit<Event, 'id' | 'createdAt'>) => {
     console.log('🎉 Creating event via API:', event);
-    
+
     try {
       const result = await createEventMutation.mutateAsync({
         name: event.name,
@@ -72,7 +72,7 @@ export const [EventProvider, useEvents] = createContextHook(() => {
         accentColor: event.accentColor,
         organizationId: event.organizationId,
       });
-      
+
       console.log('✅ Event created successfully:', result);
       return result;
     } catch (error) {
@@ -92,7 +92,7 @@ export const [EventProvider, useEvents] = createContextHook(() => {
 
   const updateEvent = useCallback(async (eventId: string, updates: Partial<Event>) => {
     console.log('🔄 Updating event:', eventId, updates);
-    
+
     try {
       await updateEventMutation.mutateAsync({
         id: eventId,
@@ -139,7 +139,7 @@ export const [EventProvider, useEvents] = createContextHook(() => {
         employeeNumber: attendee.employeeNumber,
         ticketCode: attendee.ticketCode,
       });
-      
+
       eventsQuery.refetch();
       return result;
     } catch (error) {
@@ -159,7 +159,7 @@ export const [EventProvider, useEvents] = createContextHook(() => {
           ticketCode: a.ticketCode,
         })),
       });
-      
+
       eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to add multiple attendees:', error);
@@ -169,10 +169,10 @@ export const [EventProvider, useEvents] = createContextHook(() => {
 
   const checkInAttendee = useCallback(async (attendeeId: string) => {
     try {
-      const event = events.find(e => 
+      const event = events.find(e =>
         e.attendees?.some((a: any) => a.id === attendeeId)
       );
-      
+
       if (!event) {
         throw new Error('Event not found for attendee');
       }
@@ -247,7 +247,7 @@ export const [EventProvider, useEvents] = createContextHook(() => {
         imageUrl: prize.imageUrl,
         quantity: prize.quantity,
       });
-      
+
       eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to add prize:', error);
@@ -266,7 +266,7 @@ export const [EventProvider, useEvents] = createContextHook(() => {
           quantity: p.quantity,
         })),
       });
-      
+
       eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to add multiple prizes:', error);
@@ -296,7 +296,7 @@ export const [EventProvider, useEvents] = createContextHook(() => {
         prizeId: winner.prizeId,
         attendeeId: winner.attendeeId,
       });
-      
+
       eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to add raffle winner:', error);
@@ -313,7 +313,7 @@ export const [EventProvider, useEvents] = createContextHook(() => {
           attendeeId: w.attendeeId,
         })),
       });
-      
+
       eventsQuery.refetch();
     } catch (error) {
       console.error('❌ Failed to add multiple raffle winners:', error);
@@ -347,9 +347,81 @@ export const [EventProvider, useEvents] = createContextHook(() => {
   }, [deleteAllRaffleWinnersMutation, eventsQuery]);
 
   const loadSampleData = useCallback(async () => {
-    console.log('📦 Sample data loading is not supported in API mode');
-    throw new Error('Sample data loading is not available');
-  }, []);
+    console.log('📦 Loading sample data...');
+
+    const sampleEvents = [
+      {
+        name: 'Tech Conference 2026',
+        description: 'The biggest tech event of the year.',
+        date: '2026-05-15',
+        time: '09:00',
+        venueName: 'Expo Center',
+        location: 'Silicon Valley, CA',
+        imageUrl: 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a',
+        primaryColor: '#6366f1',
+      },
+      {
+        name: 'Music Festival',
+        description: 'A weekend of amazing live music.',
+        date: '2026-07-20',
+        time: '14:00',
+        venueName: 'Green Park',
+        location: 'Austin, TX',
+        imageUrl: 'https://images.unsplash.com/photo-1459749411177-042180ce673c',
+        primaryColor: '#ec4899',
+      },
+      {
+        name: 'Startup Pitch Day',
+        description: 'New startups pitching to investors.',
+        date: '2026-03-10',
+        time: '10:00',
+        venueName: 'Innovation Hub',
+        location: 'New York, NY',
+        imageUrl: 'https://images.unsplash.com/photo-1475721027187-4024733923f9',
+        primaryColor: '#10b981',
+      }
+    ];
+
+    try {
+      for (const eventData of sampleEvents) {
+        const createdEvent = await addEvent(eventData as any);
+
+        // Add sample attendees
+        await addMultipleAttendees([
+          {
+            eventId: createdEvent.id,
+            fullName: 'John Doe',
+            email: `john.${Date.now()}@example.com`,
+            employeeNumber: 'E001',
+            ticketCode: `TC-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+          },
+          {
+            eventId: createdEvent.id,
+            fullName: 'Jane Smith',
+            email: `jane.${Date.now()}@example.com`,
+            employeeNumber: 'E002',
+            ticketCode: `TC-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+          }
+        ] as any);
+
+        // Add sample prizes
+        await addMultiplePrizes([
+          {
+            eventId: createdEvent.id,
+            name: 'Mystery Gift',
+            description: 'A special surprise for the winner.',
+            quantity: 1,
+            imageUrl: 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a',
+          }
+        ] as any);
+      }
+
+      console.log('✅ Sample data loaded successfully');
+    } catch (error) {
+      console.error('❌ Failed to load sample data:', error);
+      throw error;
+    }
+  }, [addEvent, addMultipleAttendees, addMultiplePrizes]);
 
   const attendees = useMemo(() => {
     return events.flatMap(e => e.attendees || []);

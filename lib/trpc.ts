@@ -9,10 +9,7 @@ const AUTH_TOKEN_STORAGE_KEY = '@eventpass_auth_token';
 export const trpc = createTRPCReact<AppRouter>();
 
 const getBaseUrl = () => {
-  if (typeof window !== 'undefined') {
-    return "https://tickets.reservas.events";
-  }
-  return "https://tickets.reservas.events";
+  return process.env.EXPO_PUBLIC_RORK_API_BASE_URL || "https://tickets.reservas.events";
 };
 
 export const trpcClient = trpc.createClient({

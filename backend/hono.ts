@@ -6,9 +6,14 @@ import { appRouter } from "./trpc/app-router";
 import { createContext } from "./trpc/create-context";
 import { serve } from "@hono/node-server";
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "https://qaiaigeskomvqvcvgobo.supabase.co";
-const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_ZPA_pYdnkoZ9l6RecVFZ0Q_KnLj61Ms";
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("❌ Missing Supabase credentials in environment variables!");
+}
+
+const supabase = createClient(supabaseUrl || "", supabaseKey || "");
 
 const app = new Hono();
 
@@ -47,7 +52,7 @@ app.get("/health", (c) => {
 });
 
 // Iniciar el servidor
-const port = parseInt(process.env.PORT || "3001");
+const port = parseInt(process.env.PORT || "8081");
 
 console.log(`🚀 Starting server on port ${port}...`);
 

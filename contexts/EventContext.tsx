@@ -351,33 +351,33 @@ export const [EventProvider, useEvents] = createContextHook(() => {
 
     const sampleEvents = [
       {
-        name: 'Tech Conference 2026',
-        description: 'The biggest tech event of the year.',
+        name: '🚀 Tech Innovation Summit 2026',
+        description: 'Únete a los líderes de la industria para explorar el futuro de la IA y el desarrollo de software. Tres días de conferencias magistrales y networking.',
         date: '2026-05-15',
         time: '09:00',
-        venueName: 'Expo Center',
-        location: 'Silicon Valley, CA',
-        imageUrl: 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a',
+        venueName: 'Expo Center Santa Fe',
+        location: 'Ciudad de México, MX',
+        imageUrl: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&q=80&w=1200',
         primaryColor: '#6366f1',
       },
       {
-        name: 'Music Festival',
-        description: 'A weekend of amazing live music.',
+        name: '🎸 Neon Nights Music Festival',
+        description: 'El festival de música electrónica más grande de la región. Vive una noche inolvidable bajo las estrellas con los mejores DJs internacionales.',
         date: '2026-07-20',
-        time: '14:00',
-        venueName: 'Green Park',
-        location: 'Austin, TX',
-        imageUrl: 'https://images.unsplash.com/photo-1459749411177-042180ce673c',
+        time: '20:00',
+        venueName: 'Arena Central',
+        location: 'Monterrey, NL',
+        imageUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=1200',
         primaryColor: '#ec4899',
       },
       {
-        name: 'Startup Pitch Day',
-        description: 'New startups pitching to investors.',
+        name: '💡 Startup Pitch Day & Expo',
+        description: 'La plataforma donde las ideas se convierten en realidad. Descubre las startups más innovadoras y conecta con inversionistas de todo el mundo.',
         date: '2026-03-10',
         time: '10:00',
         venueName: 'Innovation Hub',
-        location: 'New York, NY',
-        imageUrl: 'https://images.unsplash.com/photo-1475721027187-4024733923f9',
+        location: 'Guadalajara, JAL',
+        imageUrl: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&q=80&w=1200',
         primaryColor: '#10b981',
       }
     ];
@@ -386,32 +386,53 @@ export const [EventProvider, useEvents] = createContextHook(() => {
       for (const eventData of sampleEvents) {
         const createdEvent = await addEvent(eventData as any);
 
-        // Add sample attendees
+        // Add variety of sample attendees
         await addMultipleAttendees([
           {
             eventId: createdEvent.id,
-            fullName: 'John Doe',
-            email: `john.${Date.now()}@example.com`,
-            employeeNumber: 'E001',
-            ticketCode: `TC-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+            fullName: 'Miguel Salas',
+            email: `miguel.${Date.now()}@example.com`,
+            employeeNumber: 'R-001',
+            ticketCode: `QR-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
           },
           {
             eventId: createdEvent.id,
-            fullName: 'Jane Smith',
-            email: `jane.${Date.now()}@example.com`,
-            employeeNumber: 'E002',
-            ticketCode: `TC-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+            fullName: 'Adriana Rivera',
+            email: `adriana.${Date.now()}@example.com`,
+            employeeNumber: 'R-102',
+            ticketCode: `QR-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+          },
+          {
+            eventId: createdEvent.id,
+            fullName: 'Carlos Mendoza',
+            email: `carlos.${Date.now()}@example.com`,
+            employeeNumber: 'R-245',
+            ticketCode: `QR-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+          },
+          {
+            eventId: createdEvent.id,
+            fullName: 'Elena Sofía Torres',
+            email: `elena.${Date.now()}@example.com`,
+            employeeNumber: 'R-012',
+            ticketCode: `QR-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
           }
         ] as any);
 
-        // Add sample prizes
+        // Add varied sample prizes
         await addMultiplePrizes([
           {
             eventId: createdEvent.id,
-            name: 'Mystery Gift',
-            description: 'A special surprise for the winner.',
+            name: '🎧 AirPods Pro Max',
+            description: 'Cancelación de ruido activa y sonido espacial. El premio ideal para los amantes del audio.',
             quantity: 1,
-            imageUrl: 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a',
+            imageUrl: 'https://images.unsplash.com/photo-1546435770-a3e4265029b6?auto=format&fit=crop&q=80&w=600',
+          },
+          {
+            eventId: createdEvent.id,
+            name: '💳 Gift Card Amazon $100',
+            description: 'Válida para cualquier compra en la tienda. ¡Tú eliges tu propio premio!',
+            quantity: 2,
+            imageUrl: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&q=80&w=600',
           }
         ] as any);
       }

@@ -19,19 +19,19 @@ export default function HomeScreen() {
   const handleLoadSampleData = async () => {
     Alert.alert(
       'Cargar datos de prueba',
-      '¿Deseas cargar 10 eventos de ejemplo? Esto reemplazará todos los datos actuales.',
+      '¿Deseas cargar los eventos de ejemplo premium? Esto agregará contenido realista con invitados y premios para demostración.',
       [
         {
           text: 'Cancelar',
           style: 'cancel',
         },
         {
-          text: 'Cargar',
+          text: 'Cargar Demo',
           onPress: async () => {
             setLoadingData(true);
             try {
               await loadSampleData();
-              Alert.alert('Éxito', '10 eventos de prueba han sido cargados correctamente');
+              Alert.alert('¡Listo!', 'El contenido demo de alta calidad ha sido cargado con éxito. 🎉');
             } catch {
               Alert.alert('Error', 'No se pudieron cargar los datos de prueba');
             } finally {
